@@ -1,5 +1,7 @@
 package bip32
 
+import "github.com/islishude/bip32/internal/edwards25519"
+
 func add28Mul8(kl, zl []byte) []byte {
 	var carry uint16 = 0
 	var out [32]byte
@@ -30,4 +32,17 @@ func add256Bits(kr, zr []byte) []byte {
 	}
 
 	return out[:]
+}
+
+func pointTrunc28Mul8(zl []byte) *[32]byte {
+	var hBytes [32]byte
+	kl := make([]byte, 32)
+	copy(hBytes[:], add28Mul8(kl, zl)[:32])
+
+	var A edwards25519.ExtendedGroupElement
+	edwards25519.GeScalarMultBase(&A, &hBytes)
+
+	var bytes [32]byte
+	A.ToBytes(&bytes)
+	return &bytes
 }

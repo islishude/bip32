@@ -110,18 +110,64 @@ func (x XPrv) Derive(index uint32) XPrv {
 }
 
 func (x XPrv) PublicKey() ed25519.PublicKey {
-	return x.pubkey(x.xprv[:32])
-}
-
-func (x XPrv) pubkey(prvkey []byte) ed25519.PublicKey {
 	var A edwards25519.ExtendedGroupElement
 
 	var hBytes [32]byte
-	copy(hBytes[:], prvkey[:32]) // make sure prvkey is 32 bytes
+	copy(hBytes[:], x.xprv[:32]) // make sure prvkey is 32 bytes
 
 	edwards25519.GeScalarMultBase(&A, &hBytes)
 	var publicKeyBytes [32]byte
 	A.ToBytes(&publicKeyBytes)
 
 	return publicKeyBytes[:]
+}
+
+func (x XPrv) Sign(message []byte) []byte {
+	var hashOut [64]byte
+
+	h := sha512.New()
+	h.Write(x.xprv[32:]) // write kr
+	h.Write(message)     // write msg
+	h.Sum(hashOut[:0])
+
+	var nonce [32]byte
+	edwards25519.ScReduce(&nonce, &hashOut)
+
+	var signature [ed25519.SignatureSize]byte
+	var R edwards25519.ExtendedGroupElement
+	edwards25519.GeScalarMultBase(&R, &nonce)
+
+	var r [32]byte
+	R.ToBytes(&r)
+
+	copy(signature[:32], r[:])
+	copy(signature[32:], x.PublicKey())
+
+	h.Reset()
+
+	var hramDigest [64]byte
+	h.Write(signature[:]) // write signature
+	h.Write(message)      // write msg
+	h.Sum(hramDigest[:0])
+
+	var hramDigestReduced [32]byte
+	edwards25519.ScReduce(&hramDigestReduced, &hramDigest)
+
+	var private32 [32]byte
+	copy(private32[:], x.xprv[0:32])
+
+	var s [32]byte
+
+	edwards25519.ScMulAdd(&s, &hramDigestReduced, &private32, &nonce)
+	copy(signature[:], r[:])
+	copy(signature[32:], s[:])
+
+	return signature[:]
+}
+
+func (x XPrv) XPub() XPub {
+	var xpub [64]byte
+	copy(xpub[:32], x.PublicKey())
+	copy(xpub[32:], x.xprv[32:64])
+	return XPub{xpub: xpub[:]}
 }
