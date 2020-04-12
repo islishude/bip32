@@ -126,8 +126,8 @@ func (x XPrv) Sign(message []byte) []byte {
 	var hashOut [64]byte
 
 	h := sha512.New()
-	h.Write(x.xprv[32:]) // write kr
-	h.Write(message)     // write msg
+	_, _ = h.Write(x.xprv[32:]) // write kr
+	_, _ = h.Write(message)     // write msg
 	h.Sum(hashOut[:0])
 
 	var nonce [32]byte
@@ -146,8 +146,8 @@ func (x XPrv) Sign(message []byte) []byte {
 	h.Reset()
 
 	var hramDigest [64]byte
-	h.Write(signature[:]) // write signature
-	h.Write(message)      // write msg
+	_, _ = h.Write(signature[:]) // write signature
+	_, _ = h.Write(message)      // write msg
 	h.Sum(hramDigest[:0])
 
 	var hramDigestReduced [32]byte

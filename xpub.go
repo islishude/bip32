@@ -32,13 +32,13 @@ func (x XPub) Derive(index uint32) XPub {
 	seri := make([]byte, 4)
 	binary.LittleEndian.PutUint32(seri, index)
 
-	zmac.Write([]byte{2})
-	zmac.Write(pubkey)
-	zmac.Write(seri)
+	_, _ = zmac.Write([]byte{2})
+	_, _ = zmac.Write(pubkey)
+	_, _ = zmac.Write(seri)
 
-	imac.Write([]byte{3})
-	imac.Write(pubkey)
-	imac.Write(seri)
+	_, _ = imac.Write([]byte{3})
+	_, _ = imac.Write(pubkey)
+	_, _ = imac.Write(seri)
 
 	zl8 := pointTrunc28Mul8(zmac.Sum(nil)[:32])
 
