@@ -34,7 +34,7 @@ func add256Bits(kr, zr []byte) []byte {
 	return out[:]
 }
 
-func pointTrunc28Mul8(zl []byte) *[32]byte {
+func pointLeft(pubkey, zl []byte) []byte {
 	var hBytes [32]byte
 	kl := make([]byte, 32)
 	copy(hBytes[:], add28Mul8(kl, zl)[:32])
@@ -42,7 +42,19 @@ func pointTrunc28Mul8(zl []byte) *[32]byte {
 	var A edwards25519.ExtendedGroupElement
 	edwards25519.GeScalarMultBase(&A, &hBytes)
 
-	var bytes [32]byte
-	A.ToBytes(&bytes)
-	return &bytes
+	var zl8b [32]byte
+	A.ToBytes(&zl8b)
+
+	var key [32]byte
+	key[0] = 1
+
+	var ap [32]byte
+	copy(ap[:], pubkey)
+	A.FromBytes(&ap)
+
+	var Ai edwards25519.ProjectiveGroupElement
+	edwards25519.GeDoubleScalarMultVartime(&Ai, &key, &A, &zl8b)
+	Ai.ToBytes(&key)
+
+	return key[:]
 }
