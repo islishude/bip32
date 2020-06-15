@@ -32,6 +32,10 @@ func (x XPub) PublicKey() ed25519.PublicKey {
 	return append([]byte(nil), x.xpub[:32]...)
 }
 
+func (x XPub) ChainCode() []byte {
+	return append([]byte(nil), x.xpub[32:]...)
+}
+
 func (x XPub) Derive(index uint32) XPub {
 	if index > HardIndex {
 		panic("bip32: xpub: expected a soft derivation," + strconv.FormatUint(uint64(index), 10))

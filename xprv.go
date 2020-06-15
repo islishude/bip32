@@ -68,6 +68,10 @@ func (x XPrv) Bytes() []byte {
 	return append([]byte(nil), x.xprv...)
 }
 
+func (x XPrv) ChainCode() []byte {
+	return append([]byte(nil), x.xprv[64:]...)
+}
+
 func (x XPrv) Derive(index uint32) XPrv {
 	/*
 		cP is the chain code.

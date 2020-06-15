@@ -72,6 +72,5 @@ func pointPlus(pk, zl8 *[32]byte) (*[32]byte, bool) {
 	var res [32]byte
 	p2.ToBytes(&res)
 
-	res[31] ^= 0x80
 	return &res, true
 }
