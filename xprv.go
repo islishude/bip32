@@ -13,12 +13,28 @@ import (
 
 const (
 	XPrvSize  = 96
-	SeedSize  = 64
+	XPubSize  = 64
 	HardIndex = 0x80000000
 )
 
 type XPrv struct {
 	xprv []byte
+}
+
+func NewXPrv(raw []byte) XPrv {
+	if len(raw) != 96 {
+		panic("xprv size should be 96 bytes")
+	}
+
+	if (raw[0] & 0b0000_0111) != 0b0000_0000 {
+		panic("the lowest 3 bits of the first byte of seed should be cleared")
+	}
+
+	if (raw[31] & 0b1100_0000) != 0b0100_0000 {
+		panic("the highest bit of the last byte of seed should be cleared")
+	}
+
+	return XPrv{xprv: append([]byte(nil), raw...)}
 }
 
 func NewRootXPrv(seed []byte) XPrv {
@@ -27,7 +43,7 @@ func NewRootXPrv(seed []byte) XPrv {
 	secretKey := sha512.Sum512(seed[:32])
 
 	// Modify kL:
-	// the lowest 3 bits of the first byte of arecleared
+	// the lowest 3 bits of the first byte are cleared
 	secretKey[0] &= 0b1111_1000
 	// the highest bit of the last byte is cleared
 	// and third highest bit also should clear according bip32-ed25519 spec
@@ -46,6 +62,10 @@ func NewRootXPrv(seed []byte) XPrv {
 
 func (x XPrv) String() string {
 	return hex.EncodeToString(x.xprv)
+}
+
+func (x XPrv) Bytes() []byte {
+	return append([]byte(nil), x.xprv...)
 }
 
 func (x XPrv) Derive(index uint32) XPrv {
@@ -102,9 +122,9 @@ func (x XPrv) Derive(index uint32) XPrv {
 	zl, zr := zout[0:32], zout[32:64]
 
 	result := make([]byte, 96)
-	copy(result[0:32], add28Mul8(kl, zl))   // kl
-	copy(result[32:64], add256Bits(kr, zr)) // kr
-	copy(result[64:96], iout[32:])          // chain code
+	copy(result[0:32], add28Mul8(kl, zl)[:])   // kl
+	copy(result[32:64], add256Bits(kr, zr)[:]) // kr
+	copy(result[64:96], iout[32:])             // chain code
 
 	return XPrv{result}
 }
@@ -168,6 +188,6 @@ func (x XPrv) Sign(message []byte) []byte {
 func (x XPrv) XPub() XPub {
 	var xpub [64]byte
 	copy(xpub[:32], x.PublicKey())
-	copy(xpub[32:], x.xprv[32:64])
+	copy(xpub[32:], x.xprv[64:96])
 	return XPub{xpub: xpub[:]}
 }

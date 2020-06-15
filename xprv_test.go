@@ -8,7 +8,8 @@ import (
 )
 
 const TestSeed = "cdc36eaa638a07b5881b62bbb8ea8c2819e2b50e0cf51de14489c6d2dc29cb7914828443112319ee3ee64c82cda51c0f0df3c9550994bf70b4383d234e6e8ffd"
-const TestKey = "80660d61ec16a6ca93e05e1738082dff22a422f00e95a5dfa9d91a74fab4725a017255017df26d8ff29dbe315c838cd3837a311e611a9dd1c8c8a82a21ad2ec314828443112319ee3ee64c82cda51c0f0df3c9550994bf70b4383d234e6e8ffd"
+const TestKey = "80660d61ec16a6ca93e05e1738082dff22a422f00e95a5dfa9d91a74fab4725a017255017df26d8ff29dbe315c838cd" +
+	"3837a311e611a9dd1c8c8a82a21ad2ec314828443112319ee3ee64c82cda51c0f0df3c9550994bf70b4383d234e6e8ffd"
 
 func MustHexDecode(t *testing.T) func(raw string, size int) []byte {
 	return func(raw string, size int) []byte {

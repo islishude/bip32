@@ -1,8 +1,10 @@
 package bip32
 
-import "github.com/islishude/bip32/internal/edwards25519"
+import (
+	"github.com/islishude/bip32/internal/edwards25519"
+)
 
-func add28Mul8(kl, zl []byte) []byte {
+func add28Mul8(kl, zl []byte) *[32]byte {
 	var carry uint16 = 0
 	var out [32]byte
 
@@ -18,43 +20,58 @@ func add28Mul8(kl, zl []byte) []byte {
 		carry = r >> 8
 	}
 
-	return out[:]
+	return &out
 }
 
-func add256Bits(kr, zr []byte) []byte {
+func add256Bits(kr, zr []byte) *[32]byte {
 	var carry uint16 = 0
 	var out [32]byte
 
 	for i := 0; i < 32; i++ {
 		r := uint16(kr[i]) + uint16(zr[i]) + carry
-		out[i] = byte(r & 0xff)
+		out[i] = byte(r)
 		carry = r >> 8
 	}
 
-	return out[:]
+	return &out
 }
 
-func pointLeft(pubkey, zl []byte) []byte {
-	var hBytes [32]byte
-	kl := make([]byte, 32)
-	copy(hBytes[:], add28Mul8(kl, zl)[:32])
+// ProjectiveGroupElement { X Y Z } == GeP2
+// ExtendedGroupElement { X Y Z T } == GeP3
 
-	var A edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&A, &hBytes)
+func pointOfTrunc28Mul8(zl []byte) *[32]byte {
+	copy := add28Mul8(make([]byte, 32), zl)
+	var Ap edwards25519.ExtendedGroupElement
+	edwards25519.GeScalarMultBase(&Ap, copy)
 
 	var zl8b [32]byte
-	A.ToBytes(&zl8b)
+	Ap.ToBytes(&zl8b)
+	return &zl8b
+}
 
-	var key [32]byte
-	key[0] = 1
+func pointPlus(pk, zl8 *[32]byte) (*[32]byte, bool) {
+	var a edwards25519.ExtendedGroupElement
+	if !a.FromBytes(pk) {
+		return nil, false
+	}
 
-	var ap [32]byte
-	copy(ap[:], pubkey)
-	A.FromBytes(&ap)
+	var b edwards25519.ExtendedGroupElement
+	if !b.FromBytes(zl8) {
+		return nil, false
+	}
 
-	var Ai edwards25519.ProjectiveGroupElement
-	edwards25519.GeDoubleScalarMultVartime(&Ai, &key, &A, &zl8b)
-	Ai.ToBytes(&key)
+	var c edwards25519.CachedGroupElement
+	b.ToCached(&c)
 
-	return key[:]
+	var r edwards25519.CompletedGroupElement
+	edwards25519.GeAdd(&r, &a, &c)
+
+	var p2 edwards25519.ProjectiveGroupElement
+	r.ToProjective(&p2)
+
+	var res [32]byte
+	p2.ToBytes(&res)
+
+	res[31] ^= 0x80
+	return &res, true
 }
