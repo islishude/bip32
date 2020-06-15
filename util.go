@@ -1,8 +1,6 @@
 package bip32
 
-import (
-	"github.com/islishude/bip32/internal/edwards25519"
-)
+import "github.com/islishude/bip32/internal/edwards25519"
 
 func add28Mul8(kl, zl []byte) *[32]byte {
 	var carry uint16 = 0

@@ -6,39 +6,45 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
-	"strconv"
 )
 
+// XPub is exntend public key for ed25519
 type XPub struct {
 	xpub []byte
 }
 
+// NewXPub create XPub by plain xpub bytes
 func NewXPub(raw []byte) XPub {
 	if len(raw) != XPubSize {
-		panic("bip32: xpub size should be 64 bytes")
+		panic("bip32-ed25519: NewXPub: size should be 64 bytes")
 	}
 	return XPub{xpub: append([]byte(nil), raw...)}
 }
 
+// String implements Stringer interface and returns plain hex string
 func (x XPub) String() string {
 	return hex.EncodeToString(x.xpub)
 }
 
+// Bytes returns intenal bytes
 func (x XPub) Bytes() []byte {
 	return append([]byte(nil), x.xpub...)
 }
 
+// PublicKey returns the current public key
 func (x XPub) PublicKey() ed25519.PublicKey {
 	return append([]byte(nil), x.xpub[:32]...)
 }
 
+// ChainCode returns chain code bytes
 func (x XPub) ChainCode() []byte {
 	return append([]byte(nil), x.xpub[32:]...)
 }
 
+// Derive derives new XPub by a soft index
 func (x XPub) Derive(index uint32) XPub {
 	if index > HardIndex {
-		panic("bip32: xpub: expected a soft derivation," + strconv.FormatUint(uint64(index), 10))
+		panic("bip32-ed25519: xpub.Derive: expected a soft derivation")
 	}
 
 	var pubkey [32]byte
@@ -61,7 +67,7 @@ func (x XPub) Derive(index uint32) XPub {
 
 	left, ok := pointPlus(&pubkey, pointOfTrunc28Mul8(zmac.Sum(nil)[:32]))
 	if !ok {
-		panic("can't convert bytes to edwards25519.ExtendedGroupElement")
+		panic("bip32-ed25519: can't convert bytes to edwards25519.ExtendedGroupElement")
 	}
 
 	var out [64]byte
@@ -70,6 +76,7 @@ func (x XPub) Derive(index uint32) XPub {
 	return XPub{xpub: out[:]}
 }
 
+// Verify verifies signature by message
 func (x XPub) Verify(msg, sig []byte) bool {
 	pk := x.xpub[:32]
 	return ed25519.Verify(pk, msg, sig)

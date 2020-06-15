@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 
 	"github.com/islishude/bip32/internal/edwards25519"
 )
@@ -17,26 +18,30 @@ const (
 	HardIndex = 0x80000000
 )
 
+// XPrv is exntend private key for ed25519
 type XPrv struct {
 	xprv []byte
 }
 
-func NewXPrv(raw []byte) XPrv {
-	if len(raw) != 96 {
-		panic("xprv size should be 96 bytes")
+// NewXPrv creates XPrv by plain xprv values
+func NewXPrv(raw []byte) (XPrv, error) {
+	if len(raw) != XPrvSize {
+		return XPrv{}, errors.New("bip32-ed25519: NewXPrv: size should be 96 bytes")
 	}
 
 	if (raw[0] & 0b0000_0111) != 0b0000_0000 {
-		panic("the lowest 3 bits of the first byte of seed should be cleared")
+		return XPrv{}, errors.New("bip32-ed25519: NewXPrv: the lowest 3 bits of the first byte of seed should be cleared")
 	}
 
 	if (raw[31] & 0b1100_0000) != 0b0100_0000 {
-		panic("the highest bit of the last byte of seed should be cleared")
+		return XPrv{}, errors.New("bip32-ed25519: NewXPrv: the highest bit of the last byte of seed should be cleared")
 	}
 
-	return XPrv{xprv: append([]byte(nil), raw...)}
+	return XPrv{xprv: append([]byte(nil), raw...)}, nil
 }
 
+// NewRootXPrv creates XPrv by seed(bip39)
+// the seed size should be greater than 32 bytes
 func NewRootXPrv(seed []byte) XPrv {
 	// Let ˜k(seed) be 256-bit master secret
 	// Then derive k = H512(˜k)and denote its left 32-byte by kL and right one by kR.
@@ -60,18 +65,22 @@ func NewRootXPrv(seed []byte) XPrv {
 	return XPrv{xprv}
 }
 
+// String implements Stringer interface and returns plain hex string
 func (x XPrv) String() string {
 	return hex.EncodeToString(x.xprv)
 }
 
+// Bytes returns intenal bytes
 func (x XPrv) Bytes() []byte {
 	return append([]byte(nil), x.xprv...)
 }
 
+// ChainCode returns chain code bytes
 func (x XPrv) ChainCode() []byte {
 	return append([]byte(nil), x.xprv[64:]...)
 }
 
+// Derive derives new XPrv by an index
 func (x XPrv) Derive(index uint32) XPrv {
 	/*
 		cP is the chain code.
@@ -133,6 +142,15 @@ func (x XPrv) Derive(index uint32) XPrv {
 	return XPrv{result}
 }
 
+// DeriveHard derives new XPrv by a hardend index
+func (x XPrv) DeriveHard(index uint32) XPrv {
+	if index > HardIndex {
+		panic("bip32-ed25519: xprv.DeriveHard: overflow")
+	}
+	return x.Derive(HardIndex + index)
+}
+
+// PublicKey returns the public key
 func (x XPrv) PublicKey() ed25519.PublicKey {
 	var A edwards25519.ExtendedGroupElement
 
@@ -146,53 +164,51 @@ func (x XPrv) PublicKey() ed25519.PublicKey {
 	return publicKeyBytes[:]
 }
 
+// Sign signs message
 func (x XPrv) Sign(message []byte) []byte {
-	var hashOut [64]byte
+	var hsout [64]byte
 
-	h := sha512.New()
-	_, _ = h.Write(x.xprv[32:]) // write kr
-	_, _ = h.Write(message)     // write msg
-	h.Sum(hashOut[:0])
+	hasher := sha512.New()
+	_, _ = hasher.Write(x.xprv[32:64])
+	_, _ = hasher.Write(message)
+	hasher.Sum(hsout[:0])
 
 	var nonce [32]byte
-	edwards25519.ScReduce(&nonce, &hashOut)
-
-	var signature [ed25519.SignatureSize]byte
-	var R edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&R, &nonce)
+	edwards25519.ScReduce(&nonce, &hsout)
 
 	var r [32]byte
+	var R edwards25519.ExtendedGroupElement
+	edwards25519.GeScalarMultBase(&R, &nonce)
 	R.ToBytes(&r)
 
-	copy(signature[:32], r[:])
-	copy(signature[32:], x.PublicKey())
+	var sig [ed25519.SignatureSize]byte
+	copy(sig[:32], r[:])
+	copy(sig[32:], x.PublicKey()[:])
 
-	h.Reset()
+	hasher.Reset()
+	_, _ = hasher.Write(sig[:])
+	_, _ = hasher.Write(message)
+	hasher.Sum(hsout[:0])
 
-	var hramDigest [64]byte
-	_, _ = h.Write(signature[:]) // write signature
-	_, _ = h.Write(message)      // write msg
-	h.Sum(hramDigest[:0])
+	var a [32]byte
+	edwards25519.ScReduce(&a, &hsout)
 
-	var hramDigestReduced [32]byte
-	edwards25519.ScReduce(&hramDigestReduced, &hramDigest)
+	var s, b [32]byte
+	copy(b[:], x.xprv[:32])
+	edwards25519.ScMulAdd(&s, &a, &b, &nonce)
 
-	var private32 [32]byte
-	copy(private32[:], x.xprv[0:32])
+	copy(sig[:], r[:])
+	copy(sig[32:], s[:])
 
-	var s [32]byte
-
-	edwards25519.ScMulAdd(&s, &hramDigestReduced, &private32, &nonce)
-	copy(signature[:], r[:])
-	copy(signature[32:], s[:])
-
-	return signature[:]
+	return sig[:]
 }
 
+// Verify verifies signature by message
 func (x XPrv) Verify(msg, sig []byte) bool {
 	return ed25519.Verify(x.PublicKey(), msg, sig)
 }
 
+// XPub returns extends public key for current xprv
 func (x XPrv) XPub() XPub {
 	var xpub [64]byte
 	copy(xpub[:32], x.PublicKey())
