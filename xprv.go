@@ -18,10 +18,12 @@ const (
 	HardIndex = 0x80000000
 )
 
+// XPrv is exntend private key for ed25519
 type XPrv struct {
 	xprv []byte
 }
 
+// NewXPrv creates XPrv by plain xprv values
 func NewXPrv(raw []byte) (XPrv, error) {
 	if len(raw) != XPrvSize {
 		return XPrv{}, errors.New("bip32-ed25519: NewXPrv: size should be 96 bytes")
@@ -38,6 +40,8 @@ func NewXPrv(raw []byte) (XPrv, error) {
 	return XPrv{xprv: append([]byte(nil), raw...)}, nil
 }
 
+// NewRootXPrv creates XPrv by seed(bip39)
+// the seed size should be greater than 32 bytes
 func NewRootXPrv(seed []byte) XPrv {
 	// Let ˜k(seed) be 256-bit master secret
 	// Then derive k = H512(˜k)and denote its left 32-byte by kL and right one by kR.
@@ -61,18 +65,22 @@ func NewRootXPrv(seed []byte) XPrv {
 	return XPrv{xprv}
 }
 
+// String implements Stringer interface and returns plain hex string
 func (x XPrv) String() string {
 	return hex.EncodeToString(x.xprv)
 }
 
+// Bytes returns intenal bytes
 func (x XPrv) Bytes() []byte {
 	return append([]byte(nil), x.xprv...)
 }
 
+// ChainCode returns chain code bytes
 func (x XPrv) ChainCode() []byte {
 	return append([]byte(nil), x.xprv[64:]...)
 }
 
+// Derive derives new XPrv by an index
 func (x XPrv) Derive(index uint32) XPrv {
 	/*
 		cP is the chain code.
@@ -134,6 +142,7 @@ func (x XPrv) Derive(index uint32) XPrv {
 	return XPrv{result}
 }
 
+// DeriveHard derives new XPrv by a hardend index
 func (x XPrv) DeriveHard(index uint32) XPrv {
 	if index > HardIndex {
 		panic("bip32-ed25519: xprv.DeriveHard: overflow")
@@ -141,6 +150,7 @@ func (x XPrv) DeriveHard(index uint32) XPrv {
 	return x.Derive(HardIndex + index)
 }
 
+// PublicKey returns the public key
 func (x XPrv) PublicKey() ed25519.PublicKey {
 	var A edwards25519.ExtendedGroupElement
 
@@ -154,6 +164,7 @@ func (x XPrv) PublicKey() ed25519.PublicKey {
 	return publicKeyBytes[:]
 }
 
+// Sign signs message
 func (x XPrv) Sign(message []byte) []byte {
 	var hsout [64]byte
 
@@ -192,10 +203,12 @@ func (x XPrv) Sign(message []byte) []byte {
 	return sig[:]
 }
 
+// Verify verifies signature by message
 func (x XPrv) Verify(msg, sig []byte) bool {
 	return ed25519.Verify(x.PublicKey(), msg, sig)
 }
 
+// XPub returns extends public key for current xprv
 func (x XPrv) XPub() XPub {
 	var xpub [64]byte
 	copy(xpub[:32], x.PublicKey())
