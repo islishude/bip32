@@ -185,6 +185,10 @@ func (x XPrv) Sign(message []byte) []byte {
 	return signature[:]
 }
 
+func (x XPrv) Verify(msg, sig []byte) bool {
+	return ed25519.Verify(x.PublicKey(), msg, sig)
+}
+
 func (x XPrv) XPub() XPub {
 	var xpub [64]byte
 	copy(xpub[:32], x.PublicKey())

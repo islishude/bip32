@@ -65,3 +65,8 @@ func (x XPub) Derive(index uint32) XPub {
 	copy(out[32:], imac.Sum(nil)[32:])
 	return XPub{xpub: out[:]}
 }
+
+func (x XPub) Verify(msg, sig []byte) bool {
+	pk := x.xpub[:32]
+	return ed25519.Verify(pk, msg, sig)
+}
