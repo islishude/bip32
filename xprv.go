@@ -22,16 +22,16 @@ type XPrv struct {
 }
 
 func NewXPrv(raw []byte) XPrv {
-	if len(raw) != 96 {
-		panic("xprv size should be 96 bytes")
+	if len(raw) != XPrvSize {
+		panic("bip32-ed25519: NewXPrv: size should be 96 bytes")
 	}
 
 	if (raw[0] & 0b0000_0111) != 0b0000_0000 {
-		panic("the lowest 3 bits of the first byte of seed should be cleared")
+		panic("bip32-ed25519: NewXPrv: the lowest 3 bits of the first byte of seed should be cleared")
 	}
 
 	if (raw[31] & 0b1100_0000) != 0b0100_0000 {
-		panic("the highest bit of the last byte of seed should be cleared")
+		panic("bip32-ed25519: NewXPrv: the highest bit of the last byte of seed should be cleared")
 	}
 
 	return XPrv{xprv: append([]byte(nil), raw...)}
@@ -133,6 +133,13 @@ func (x XPrv) Derive(index uint32) XPrv {
 	return XPrv{result}
 }
 
+func (x XPrv) DeriveHard(index uint32) XPrv {
+	if index > HardIndex {
+		panic("bip32-ed25519: xprv.DeriveHard: overflow")
+	}
+	return x.Derive(HardIndex + index)
+}
+
 func (x XPrv) PublicKey() ed25519.PublicKey {
 	var A edwards25519.ExtendedGroupElement
 
@@ -170,7 +177,7 @@ func (x XPrv) Sign(message []byte) []byte {
 	h.Reset()
 
 	var hramDigest [64]byte
-	_, _ = h.Write(signature[:]) // write signature
+	_, _ = h.Write(signature[:]) // write sig
 	_, _ = h.Write(message)      // write msg
 	h.Sum(hramDigest[:0])
 

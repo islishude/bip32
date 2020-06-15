@@ -6,7 +6,6 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
-	"strconv"
 )
 
 type XPub struct {
@@ -15,7 +14,7 @@ type XPub struct {
 
 func NewXPub(raw []byte) XPub {
 	if len(raw) != XPubSize {
-		panic("bip32: xpub size should be 64 bytes")
+		panic("bip32-ed25519: NewXPub: size should be 64 bytes")
 	}
 	return XPub{xpub: append([]byte(nil), raw...)}
 }
@@ -38,7 +37,7 @@ func (x XPub) ChainCode() []byte {
 
 func (x XPub) Derive(index uint32) XPub {
 	if index > HardIndex {
-		panic("bip32: xpub: expected a soft derivation," + strconv.FormatUint(uint64(index), 10))
+		panic("bip32-ed25519: xpub.Derive: expected a soft derivation")
 	}
 
 	var pubkey [32]byte
@@ -61,7 +60,7 @@ func (x XPub) Derive(index uint32) XPub {
 
 	left, ok := pointPlus(&pubkey, pointOfTrunc28Mul8(zmac.Sum(nil)[:32]))
 	if !ok {
-		panic("can't convert bytes to edwards25519.ExtendedGroupElement")
+		panic("bip32-ed25519: can't convert bytes to edwards25519.ExtendedGroupElement")
 	}
 
 	var out [64]byte

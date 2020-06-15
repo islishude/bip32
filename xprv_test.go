@@ -1,9 +1,7 @@
 package bip32
 
 import (
-	"bytes"
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/hex"
 	"reflect"
 	"testing"
@@ -152,21 +150,5 @@ func TestXPrv_PublicKey(t *testing.T) {
 				t.Errorf("XPrv.PublicKey() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestXPrv_Derive_multi(t *testing.T) {
-	root := make([]byte, 32)
-	if _, err := rand.Read(root); err != nil {
-		t.Error(err)
-		return
-	}
-	xprv := NewRootXPrv(root)
-	for i := uint32(0); i < 100; i++ {
-		a := xprv.Derive(i).XPub().PublicKey()
-		b := xprv.XPub().Derive(i).PublicKey()
-		if !bytes.Equal(a, b) {
-			t.Errorf("TestXPrv_Derive_multi(%d) failed", i)
-		}
 	}
 }
