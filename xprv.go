@@ -23,7 +23,7 @@ type XPrv struct {
 	xprv []byte
 }
 
-// NewXPrv creates XPrv by plain xprv values
+// NewXPrv creates XPrv by plain xprv bytes
 func NewXPrv(raw []byte) (XPrv, error) {
 	if len(raw) != XPrvSize {
 		return XPrv{}, errors.New("bip32-ed25519: NewXPrv: size should be 96 bytes")
@@ -40,8 +40,7 @@ func NewXPrv(raw []byte) (XPrv, error) {
 	return XPrv{xprv: append([]byte(nil), raw...)}, nil
 }
 
-// NewRootXPrv creates XPrv by seed(bip39)
-// the seed size should be greater than 32 bytes
+// NewRootXPrv creates XPrv by seed(bip39),the seed size should be 32 bytes at least
 func NewRootXPrv(seed []byte) XPrv {
 	// Let ˜k(seed) be 256-bit master secret
 	// Then derive k = H512(˜k)and denote its left 32-byte by kL and right one by kR.
@@ -196,8 +195,6 @@ func (x XPrv) Sign(message []byte) []byte {
 	var s, b [32]byte
 	copy(b[:], x.xprv[:32])
 	edwards25519.ScMulAdd(&s, &a, &b, &nonce)
-
-	copy(sig[:], r[:])
 	copy(sig[32:], s[:])
 
 	return sig[:]
@@ -208,7 +205,7 @@ func (x XPrv) Verify(msg, sig []byte) bool {
 	return ed25519.Verify(x.PublicKey(), msg, sig)
 }
 
-// XPub returns extends public key for current xprv
+// XPub returns extends public key for current XPrv
 func (x XPrv) XPub() XPub {
 	var xpub [64]byte
 	copy(xpub[:32], x.PublicKey())
