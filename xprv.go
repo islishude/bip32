@@ -154,46 +154,41 @@ func (x XPrv) PublicKey() ed25519.PublicKey {
 }
 
 func (x XPrv) Sign(message []byte) []byte {
-	var hashOut [64]byte
+	var hsout [64]byte
 
-	h := sha512.New()
-	_, _ = h.Write(x.xprv[32:]) // write kr
-	_, _ = h.Write(message)     // write msg
-	h.Sum(hashOut[:0])
+	hasher := sha512.New()
+	_, _ = hasher.Write(x.xprv[32:64])
+	_, _ = hasher.Write(message)
+	hasher.Sum(hsout[:0])
 
 	var nonce [32]byte
-	edwards25519.ScReduce(&nonce, &hashOut)
-
-	var signature [ed25519.SignatureSize]byte
-	var R edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&R, &nonce)
+	edwards25519.ScReduce(&nonce, &hsout)
 
 	var r [32]byte
+	var R edwards25519.ExtendedGroupElement
+	edwards25519.GeScalarMultBase(&R, &nonce)
 	R.ToBytes(&r)
 
-	copy(signature[:32], r[:])
-	copy(signature[32:], x.PublicKey())
+	var sig [ed25519.SignatureSize]byte
+	copy(sig[:32], r[:])
+	copy(sig[32:], x.PublicKey()[:])
 
-	h.Reset()
+	hasher.Reset()
+	_, _ = hasher.Write(sig[:])
+	_, _ = hasher.Write(message)
+	hasher.Sum(hsout[:0])
 
-	var hramDigest [64]byte
-	_, _ = h.Write(signature[:]) // write sig
-	_, _ = h.Write(message)      // write msg
-	h.Sum(hramDigest[:0])
+	var a [32]byte
+	edwards25519.ScReduce(&a, &hsout)
 
-	var hramDigestReduced [32]byte
-	edwards25519.ScReduce(&hramDigestReduced, &hramDigest)
+	var s, b [32]byte
+	copy(b[:], x.xprv[:32])
+	edwards25519.ScMulAdd(&s, &a, &b, &nonce)
 
-	var private32 [32]byte
-	copy(private32[:], x.xprv[0:32])
+	copy(sig[:], r[:])
+	copy(sig[32:], s[:])
 
-	var s [32]byte
-
-	edwards25519.ScMulAdd(&s, &hramDigestReduced, &private32, &nonce)
-	copy(signature[:], r[:])
-	copy(signature[32:], s[:])
-
-	return signature[:]
+	return sig[:]
 }
 
 func (x XPrv) Verify(msg, sig []byte) bool {

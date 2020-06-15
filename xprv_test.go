@@ -1,7 +1,9 @@
 package bip32
 
 import (
+	"bytes"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/hex"
 	"reflect"
 	"testing"
@@ -150,5 +152,27 @@ func TestXPrv_PublicKey(t *testing.T) {
 				t.Errorf("XPrv.PublicKey() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestXPrv_Sign(t *testing.T) {
+	root, _ := hex.DecodeString("48986b99067b64edbb1d7ec030efb517ac10dea8cc8574dafb5e7abeb0a83e538a3688325877ce63bd506e97957c0fd9f26d5d8fca4e98104ca6eea38a6d9f561ef8af814f221a594724932d5af74820c7062647920d448ddbe2a9c6200c983e")
+
+	xprv, msg := NewXPrv(root), []byte("hello,world")
+	want, _ := hex.DecodeString("31f9a9cab1b62570cb4e217eed317625a47780fcbc73405da70b84416018810360e67e4d31915fae4b25ed82a95b7600244f94a475adb0ae7644e4adaba60b06")
+	if got := xprv.Sign(msg); !bytes.Equal(got, want) || !xprv.Verify(msg, got) {
+		t.Errorf("XPrv.Sign: verify failed")
+	}
+}
+
+func TestXPrv_Verify(t *testing.T) {
+	root := make([]byte, 32)
+	if _, err := rand.Read(root); err != nil {
+		t.Errorf("XPrv.Verify: get random %s", err)
+		return
+	}
+	xprv, msg := NewRootXPrv(root), []byte("trMZ7Zz7O5uLw6fb7BMmkQ==")
+	if sig := xprv.Sign(msg); !xprv.Verify(msg, sig) {
+		t.Error("verify failed")
 	}
 }
