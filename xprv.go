@@ -1,7 +1,6 @@
 package bip32
 
 import (
-	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -150,7 +149,7 @@ func (x XPrv) DeriveHard(index uint32) XPrv {
 }
 
 // PublicKey returns the public key
-func (x XPrv) PublicKey() ed25519.PublicKey {
+func (x XPrv) PublicKey() []byte {
 	var A edwards25519.ExtendedGroupElement
 
 	var hBytes [32]byte
@@ -180,7 +179,7 @@ func (x XPrv) Sign(message []byte) []byte {
 	edwards25519.GeScalarMultBase(&R, &nonce)
 	R.ToBytes(&r)
 
-	var sig [ed25519.SignatureSize]byte
+	var sig [edwards25519.SignatureSize]byte
 	copy(sig[:32], r[:])
 	copy(sig[32:], x.PublicKey()[:])
 
@@ -202,7 +201,7 @@ func (x XPrv) Sign(message []byte) []byte {
 
 // Verify verifies signature by message
 func (x XPrv) Verify(msg, sig []byte) bool {
-	return ed25519.Verify(x.PublicKey(), msg, sig)
+	return edwards25519.Verify(x.PublicKey(), msg, sig)
 }
 
 // XPub returns extends public key for current XPrv

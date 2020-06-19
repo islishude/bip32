@@ -34,9 +34,6 @@ func add256Bits(kr, zr []byte) *[32]byte {
 	return &out
 }
 
-// ProjectiveGroupElement { X Y Z } == GeP2
-// ExtendedGroupElement { X Y Z T } == GeP3
-
 func pointOfTrunc28Mul8(zl []byte) *[32]byte {
 	copy := add28Mul8(make([]byte, 32), zl)
 	var Ap edwards25519.ExtendedGroupElement

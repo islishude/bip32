@@ -2,7 +2,6 @@ package bip32
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
 	"reflect"
@@ -108,12 +107,12 @@ func TestXPrv_PublicKey(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   ed25519.PublicKey
+		want   []byte
 	}{
 		{
 			name:   "case 1",
 			fields: fields{HexDecode(TestKey, 96)},
-			want:   ed25519.PublicKey(HexDecode("0b72d9a9118f4f2d59f18f5e54202461a5132a53088af94560de51dca505eea3", 32)),
+			want:   HexDecode("0b72d9a9118f4f2d59f18f5e54202461a5132a53088af94560de51dca505eea3", 32),
 		},
 	}
 	for _, tt := range tests {

@@ -1,11 +1,12 @@
 package bip32
 
 import (
-	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+
+	"github.com/islishude/bip32/internal/edwards25519"
 )
 
 // XPub is exntend public key for ed25519
@@ -32,7 +33,7 @@ func (x XPub) Bytes() []byte {
 }
 
 // PublicKey returns the current public key
-func (x XPub) PublicKey() ed25519.PublicKey {
+func (x XPub) PublicKey() []byte {
 	return append([]byte(nil), x.xpub[:32]...)
 }
 
@@ -79,5 +80,5 @@ func (x XPub) Derive(index uint32) XPub {
 // Verify verifies signature by message
 func (x XPub) Verify(msg, sig []byte) bool {
 	pk := x.xpub[:32]
-	return ed25519.Verify(pk, msg, sig)
+	return edwards25519.Verify(pk, msg, sig)
 }
