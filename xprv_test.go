@@ -79,7 +79,7 @@ func TestXPrv_Derive(t *testing.T) {
 			want:   XPrv{HexDecode("c02210e035578f15b48ad54d90d59a88352d3160f36d0458b3e1583302b5725a435748df6415038a8fe35c46779fea8554b747a9093a8f784cf079144fc00317594479b4ed8519d7c4378a9d7c782029f61d4ec107900b8dfb70c7d609ad5a16", 96)},
 		},
 		{
-			name:   "soft",
+			name:   "hard",
 			fields: fields{HexDecode(TestKey, 96)},
 			args:   args{HardIndex},
 			want:   XPrv{HexDecode("20eeb6d38c858686b848a2f380d52d04ed1d87dba5f01f5cabe6b86e00b5725aa9f78d23bc28ed03d356d31c3842eec69609e6b207b438e0e804ab00316eec5f1af28001980d11f2b6247ad874b217f4fd50f6b785223b658fb079ce5cdd82b2", 96)},
@@ -257,7 +257,7 @@ func TestXPrv_DeriveHard(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid",
+			name: "valid",
 			fields: fields{xprv: func() []byte {
 				root, _ := hex.DecodeString(RootKey)
 				return root
