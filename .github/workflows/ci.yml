@@ -19,7 +19,7 @@ jobs:
 
   test_1_15:
     runs-on: ubuntu-latest
-    name: tests with go1.14
+    name: tests with go1.15
     steps:
       - uses: actions/checkout@v2
       - name: Setup go
