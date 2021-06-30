@@ -3,27 +3,13 @@ on:
   - push
   - pull_request
 jobs:
-  test_1_13:
-    runs-on: ubuntu-latest
-    name: tests with go1.13
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup go
-        uses: actions/setup-go@v2-beta
-        with:
-          go-version: "^1.13"
-      - name: run unit test
-        run: go test -v
-      - name: run benchmark
-        run: go test -benchmem -bench .
-
   test_1_14:
     runs-on: ubuntu-latest
     name: tests with go1.14
     steps:
       - uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2-beta
+        uses: actions/setup-go@v2
         with:
           go-version: "^1.14"
       - name: run unit test
@@ -36,12 +22,26 @@ jobs:
     name: tests with go1.15
     steps:
       - uses: actions/checkout@v2
-      - name: Run golangci-lint
-        uses: actions-contrib/golangci-lint@v1
       - name: Setup go
-        uses: actions/setup-go@v2-beta
+        uses: actions/setup-go@v2
         with:
           go-version: "^1.15"
+      - name: run unit test
+        run: go test -v
+      - name: run benchmark
+        run: go test -benchmem -bench .
+
+  test_1_16:
+    runs-on: ubuntu-latest
+    name: tests with go1.16
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.16"
       - name: run unit test
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic
       - name: run benchmark
