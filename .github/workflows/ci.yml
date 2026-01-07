@@ -2,52 +2,30 @@ name: test
 on:
   - push
   - pull_request
+
 jobs:
-  test_1_14:
+  test:
     runs-on: ubuntu-latest
-    name: tests with go1.14
+    strategy:
+      matrix:
+        golang: ["1.23", "1.24", "1.25"]
+    name: tests with go version {{ matrix.golang }}
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "^1.14"
-      - name: run unit test
-        run: go test -v
-      - name: run benchmark
-        run: go test -benchmem -bench .
+      - uses: actions/checkout@v6
 
-  test_1_15:
-    runs-on: ubuntu-latest
-    name: tests with go1.15
-    steps:
-      - uses: actions/checkout@v2
       - name: Setup go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
-          go-version: "^1.15"
-      - name: run unit test
-        run: go test -v
-      - name: run benchmark
-        run: go test -benchmem -bench .
+          go-version: "{{ matrix.golang }}"
 
-  test_1_16:
-    runs-on: ubuntu-latest
-    name: tests with go1.16
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "^1.16"
       - name: run unit test
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic
+
       - name: run benchmark
         run: go test -benchmem -bench .
+
       - name: Upload Coverage report to CodeCov
-        uses: codecov/codecov-action@v1.0.0
+        uses: codecov/codecov-action@v5
         with:
           token: ${{secrets.CODECOV_TOKEN}}
-          file: ./coverage.txt
+          files: ./coverage.txt
