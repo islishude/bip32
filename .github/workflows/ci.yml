@@ -8,15 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        golang: ["1.23", "1.24", "1.25"]
-    name: tests with go version {{ matrix.golang }}
+        golang: ["^1.23", "^1.24", "^1.25"]
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup go
         uses: actions/setup-go@v6
         with:
-          go-version: "{{ matrix.golang }}"
+          go-version: "${{ matrix.golang }}"
 
       - name: run unit test
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic
