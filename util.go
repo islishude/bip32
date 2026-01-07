@@ -1,6 +1,6 @@
 package bip32
 
-import "github.com/islishude/bip32/internal/edwards25519"
+import "filippo.io/edwards25519"
 
 func add28Mul8(kl, zl []byte) *[32]byte {
 	var carry uint16 = 0
@@ -35,37 +35,32 @@ func add256Bits(kr, zr []byte) *[32]byte {
 }
 
 func pointOfTrunc28Mul8(zl []byte) *[32]byte {
-	copy := add28Mul8(make([]byte, 32), zl)
-	var Ap edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&Ap, copy)
+	scalarBytes := add28Mul8(make([]byte, 32), zl)
+	var wideBytes [64]byte
+	copy(wideBytes[:32], scalarBytes[:])
+	scalar, _ := edwards25519.NewScalar().SetUniformBytes(wideBytes[:])
+	Ap := edwards25519.NewIdentityPoint().ScalarBaseMult(scalar)
 
 	var zl8b [32]byte
-	Ap.ToBytes(&zl8b)
+	copy(zl8b[:], Ap.Bytes())
 	return &zl8b
 }
 
 func pointPlus(pk, zl8 *[32]byte) (*[32]byte, bool) {
-	var a edwards25519.ExtendedGroupElement
-	if !a.FromBytes(pk) {
+	a, err := edwards25519.NewIdentityPoint().SetBytes(pk[:])
+	if err != nil {
 		return nil, false
 	}
 
-	var b edwards25519.ExtendedGroupElement
-	if !b.FromBytes(zl8) {
+	b, err := edwards25519.NewIdentityPoint().SetBytes(zl8[:])
+	if err != nil {
 		return nil, false
 	}
 
-	var c edwards25519.CachedGroupElement
-	b.ToCached(&c)
-
-	var r edwards25519.CompletedGroupElement
-	edwards25519.GeAdd(&r, &a, &c)
-
-	var p2 edwards25519.ProjectiveGroupElement
-	r.ToProjective(&p2)
+	r := edwards25519.NewIdentityPoint().Add(a, b)
 
 	var res [32]byte
-	p2.ToBytes(&res)
+	copy(res[:], r.Bytes())
 
 	return &res, true
 }

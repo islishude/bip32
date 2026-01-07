@@ -1,6 +1,7 @@
 package bip32
 
 import (
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -8,7 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/islishude/bip32/internal/edwards25519"
+	"filippo.io/edwards25519"
 )
 
 const (
@@ -150,16 +151,13 @@ func (x XPrv) DeriveHard(index uint32) XPrv {
 
 // PublicKey returns the public key
 func (x XPrv) PublicKey() []byte {
-	var A edwards25519.ExtendedGroupElement
+	var hBytes [64]byte
+	copy(hBytes[:32], x.xprv[:32]) // make sure prvkey is 32 bytes
 
-	var hBytes [32]byte
-	copy(hBytes[:], x.xprv[:32]) // make sure prvkey is 32 bytes
+	scalar, _ := edwards25519.NewScalar().SetUniformBytes(hBytes[:])
+	A := edwards25519.NewIdentityPoint().ScalarBaseMult(scalar)
 
-	edwards25519.GeScalarMultBase(&A, &hBytes)
-	var publicKeyBytes [32]byte
-	A.ToBytes(&publicKeyBytes)
-
-	return publicKeyBytes[:]
+	return A.Bytes()
 }
 
 // Sign signs message
@@ -171,15 +169,12 @@ func (x XPrv) Sign(message []byte) []byte {
 	_, _ = hasher.Write(message)
 	hasher.Sum(hsout[:0])
 
-	var nonce [32]byte
-	edwards25519.ScReduce(&nonce, &hsout)
+	nonce, _ := edwards25519.NewScalar().SetUniformBytes(hsout[:])
 
-	var r [32]byte
-	var R edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&R, &nonce)
-	R.ToBytes(&r)
+	R := edwards25519.NewIdentityPoint().ScalarBaseMult(nonce)
+	r := R.Bytes()
 
-	var sig [edwards25519.SignatureSize]byte
+	var sig [64]byte
 	copy(sig[:32], r[:])
 	copy(sig[32:], x.PublicKey()[:])
 
@@ -188,20 +183,21 @@ func (x XPrv) Sign(message []byte) []byte {
 	_, _ = hasher.Write(message)
 	hasher.Sum(hsout[:0])
 
-	var a [32]byte
-	edwards25519.ScReduce(&a, &hsout)
+	a, _ := edwards25519.NewScalar().SetUniformBytes(hsout[:])
 
-	var s, b [32]byte
-	copy(b[:], x.xprv[:32])
-	edwards25519.ScMulAdd(&s, &a, &b, &nonce)
-	copy(sig[32:], s[:])
+	var bBytes [64]byte
+	copy(bBytes[:32], x.xprv[:32])
+	b, _ := edwards25519.NewScalar().SetUniformBytes(bBytes[:])
+
+	s := edwards25519.NewScalar().MultiplyAdd(a, b, nonce)
+	copy(sig[32:], s.Bytes())
 
 	return sig[:]
 }
 
 // Verify verifies signature by message
 func (x XPrv) Verify(msg, sig []byte) bool {
-	return edwards25519.Verify(x.PublicKey(), msg, sig)
+	return ed25519.Verify(x.PublicKey(), msg, sig)
 }
 
 // XPub returns extends public key for current XPrv

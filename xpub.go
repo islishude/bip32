@@ -1,12 +1,11 @@
 package bip32
 
 import (
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
-
-	"github.com/islishude/bip32/internal/edwards25519"
 )
 
 // XPub is exntend public key for ed25519
@@ -68,7 +67,7 @@ func (x XPub) Derive(index uint32) XPub {
 
 	left, ok := pointPlus(&pubkey, pointOfTrunc28Mul8(zmac.Sum(nil)[:32]))
 	if !ok {
-		panic("bip32-ed25519: can't convert bytes to edwards25519.ExtendedGroupElement")
+		panic("bip32-ed25519: can't convert bytes to edwards25519 Point")
 	}
 
 	var out [64]byte
@@ -80,5 +79,5 @@ func (x XPub) Derive(index uint32) XPub {
 // Verify verifies signature by message
 func (x XPub) Verify(msg, sig []byte) bool {
 	pk := x.xpub[:32]
-	return edwards25519.Verify(pk, msg, sig)
+	return ed25519.Verify(pk, msg, sig)
 }
