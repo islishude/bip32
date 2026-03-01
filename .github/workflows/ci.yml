@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        golang: ["^1.23", "^1.24", "^1.25"]
+        golang: ["^1.26", "^1.25", "^1.24"]
     steps:
       - uses: actions/checkout@v6
 
