@@ -24,7 +24,7 @@ jobs:
         run: go test -benchmem -bench .
 
       - name: Upload Coverage report to CodeCov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./coverage.txt
