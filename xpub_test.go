@@ -18,7 +18,7 @@ func TestXPub_Derive(t *testing.T) {
 	msg := sha256.Sum256(root)
 
 	xprv := NewRootXPrv(root)
-	for i := uint32(0); i < 100; i++ {
+	for i := range uint32(100) {
 
 		a, b := xprv.Derive(i).XPub(), xprv.XPub().Derive(i)
 		if !bytes.Equal(a.PublicKey(), b.PublicKey()) {
@@ -26,16 +26,31 @@ func TestXPub_Derive(t *testing.T) {
 			continue
 		}
 
+		strict, err := xprv.XPub().DeriveStrict(i)
+		if err != nil {
+			t.Errorf("XPub.DeriveStrict failed: %d: %s", i, err)
+			continue
+		}
+		if !reflect.DeepEqual(strict, b) {
+			t.Errorf("XPub.DeriveStrict(%d) = %s, want %s", i, strict, b)
+			continue
+		}
+
 		if sig := xprv.Derive(i).Sign(msg[:]); !b.Verify(msg[:], sig) || !a.Verify(msg[:], sig) {
 			t.Errorf("XPub.Derive: verfiy failed: %d", i)
 		}
 	}
+
+	if _, err := xprv.XPub().DeriveStrict(HardIndex); err == nil {
+		t.Error("XPub.DeriveStrict: expected error for hard derivation")
+	}
+
 	defer func() {
 		if err := recover(); err == nil {
 			t.Error("shuold panic for hard derivation")
 		}
 	}()
-	_ = xprv.XPub().Derive(HardIndex + 1)
+	_ = xprv.XPub().Derive(HardIndex)
 }
 
 func TestNewXPub(t *testing.T) {

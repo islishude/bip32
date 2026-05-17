@@ -3,6 +3,7 @@ package bip32
 import (
 	"bytes"
 	"encoding/hex"
+	"math/big"
 	"testing"
 )
 
@@ -65,4 +66,41 @@ func Test_add256Bits(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_isDivisibleByEd25519BaseOrder(t *testing.T) {
+	if !isDivisibleByEd25519BaseOrder(make([]byte, 32)) {
+		t.Fatal("isDivisibleByEd25519BaseOrder: zero should be divisible")
+	}
+
+	order := littleEndianBytesFromBigInt(new(big.Int).Set(ed25519BaseOrder))
+	if !isDivisibleByEd25519BaseOrder(order) {
+		t.Fatal("isDivisibleByEd25519BaseOrder: base order should be divisible")
+	}
+
+	orderPlusOne := littleEndianBytesFromBigInt(new(big.Int).Add(ed25519BaseOrder, big.NewInt(1)))
+	if isDivisibleByEd25519BaseOrder(orderPlusOne) {
+		t.Fatal("isDivisibleByEd25519BaseOrder: base order plus one should not be divisible")
+	}
+}
+
+func Test_isIdentityPointEncoding(t *testing.T) {
+	var identity [32]byte
+	identity[0] = 1
+	if !isIdentityPointEncoding(identity[:]) {
+		t.Fatal("isIdentityPointEncoding: expected identity encoding")
+	}
+
+	if isIdentityPointEncoding(make([]byte, 32)) {
+		t.Fatal("isIdentityPointEncoding: zero bytes should not be identity encoding")
+	}
+}
+
+func littleEndianBytesFromBigInt(value *big.Int) []byte {
+	be := value.Bytes()
+	le := make([]byte, 32)
+	for i := range be {
+		le[i] = be[len(be)-1-i]
+	}
+	return le
 }

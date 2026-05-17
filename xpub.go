@@ -6,14 +6,16 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 )
 
-// XPub is exntend public key for ed25519
+// XPub is an extended public key for BIP32-Ed25519.
+// The encoded layout is publicKey || chainCode, each 32 bytes.
 type XPub struct {
 	xpub []byte
 }
 
-// NewXPub create XPub by plain xpub bytes
+// NewXPub creates XPub from raw extended public key bytes.
 func NewXPub(raw []byte) XPub {
 	if len(raw) != XPubSize {
 		panic("bip32-ed25519: NewXPub: size should be 64 bytes")
@@ -41,12 +43,29 @@ func (x XPub) ChainCode() []byte {
 	return append([]byte(nil), x.xpub[32:]...)
 }
 
-// Derive derives new XPub by a soft index
+// Derive derives a new XPub by a soft index.
+// It panics for hardened indexes because those require the parent private key.
 func (x XPub) Derive(index uint32) XPub {
-	if index > HardIndex {
-		panic("bip32-ed25519: xpub.Derive: expected a soft derivation")
+	result, err := x.derive(index, false)
+	if err != nil {
+		panic(err.Error())
+	}
+	return result
+}
+
+// DeriveStrict derives new XPub by a soft index and rejects discarded children.
+func (x XPub) DeriveStrict(index uint32) (XPub, error) {
+	return x.derive(index, true)
+}
+
+// derive performs public child-key derivation shared by legacy and strict APIs.
+// strict only controls whether the rare identity-point child is rejected.
+func (x XPub) derive(index uint32, strict bool) (XPub, error) {
+	if index >= HardIndex {
+		return XPub{}, errors.New("bip32-ed25519: xpub.Derive: expected a soft derivation")
 	}
 
+	// Public derivation only has AP and cP, so it can derive soft children only.
 	var pubkey [32]byte
 	copy(pubkey[:], x.xpub[:32])
 	chaincode := append([]byte(nil), x.xpub[32:]...)
@@ -57,23 +76,31 @@ func (x XPub) Derive(index uint32) XPub {
 	seri := make([]byte, 4)
 	binary.LittleEndian.PutUint32(seri, index)
 
+	// Z controls the public-key point offset [8 * ZL]B.
 	_, _ = zmac.Write([]byte{2})
 	_, _ = zmac.Write(pubkey[:])
 	_, _ = zmac.Write(seri)
 
+	// I contributes the next chain code; only the right 32 bytes are used.
 	_, _ = imac.Write([]byte{3})
 	_, _ = imac.Write(pubkey[:])
 	_, _ = imac.Write(seri)
 
+	// Ai = AP + [8 * ZL]B, where ZL is truncated to 28 bytes by the helper.
 	left, ok := pointPlus(&pubkey, pointOfTrunc28Mul8(zmac.Sum(nil)[:32]))
 	if !ok {
-		panic("bip32-ed25519: can't convert bytes to edwards25519 Point")
+		return XPub{}, errors.New("bip32-ed25519: can't convert bytes to edwards25519 Point")
 	}
 
 	var out [64]byte
 	copy(out[:32], left[:32])
 	copy(out[32:], imac.Sum(nil)[32:])
-	return XPub{xpub: out[:]}
+
+	if strict && isIdentityPointEncoding(out[:32]) {
+		return XPub{}, errors.New("bip32-ed25519: XPub.DeriveStrict: child public key is the identity point")
+	}
+
+	return XPub{xpub: out[:]}, nil
 }
 
 // Verify verifies signature by message
