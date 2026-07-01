@@ -10,7 +10,7 @@ jobs:
       matrix:
         golang: ["^1.26", "^1.25"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup go
         uses: actions/setup-go@v6
@@ -27,7 +27,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload Coverage report to CodeCov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./coverage.txt
