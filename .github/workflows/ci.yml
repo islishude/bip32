@@ -19,6 +19,10 @@ jobs:
           check-latest: true
 
       - run: go build ./...
+      - name: check generated secp256k1 table
+        run: |
+          go generate ./internal/secp256k1
+          git diff --exit-code
       - run: gofmt -d .
       - run: go vet ./...
       - run: go mod tidy -diff

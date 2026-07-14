@@ -1,22 +1,10 @@
-package bip32ed25519
+package bip32
 
-import (
-	"encoding/binary"
-
-	bip32 "github.com/islishude/bip32/v2"
-	"github.com/islishude/bip32/v2/internal/bip32path"
-)
-
-// ser32LE serializes a child index using ED25519-BIP32 little-endian order.
-func ser32LE(i uint32) [4]byte {
-	var out [4]byte
-	binary.LittleEndian.PutUint32(out[:], i)
-	return out
-}
+import "github.com/islishude/bip32/v2/internal/bip32path"
 
 // IsHardened reports whether i has the hardened offset bit set.
 func IsHardened(i uint32) bool {
-	return bip32.IsHardened(i)
+	return i >= HardenedOffset
 }
 
 // Harden returns i with the hardened offset applied.
@@ -24,14 +12,13 @@ func Harden(i uint32) (uint32, error) {
 	return bip32path.Harden(i, HardenedOffset, ErrInvalidPath)
 }
 
-// ParseAbsolutePath parses paths rooted at m.
-//
-// It accepts suffixes ', h, and H for hardened indexes.
+// ParseAbsolutePath parses a path rooted at m. Hardened suffixes may be ', h,
+// or H.
 func ParseAbsolutePath(path string) ([]uint32, error) {
 	return bip32path.ParseAbsolutePath(path, HardenedOffset, ErrInvalidPath)
 }
 
-// ParseRelativePath parses relative paths such as 0/0.
+// ParseRelativePath parses a path relative to an existing extended key.
 func ParseRelativePath(path string) ([]uint32, error) {
 	return bip32path.ParseRelativePath(path, HardenedOffset, ErrInvalidPath)
 }
