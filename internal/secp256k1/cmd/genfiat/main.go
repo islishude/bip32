@@ -1,20 +1,20 @@
 // Copyright 2026 The secp256k1 Authors.
 //
-// This generator follows the same shape as Go's
+// Command genfiat regenerates the field and scalar arithmetic. It follows the
+// same shape as Go's
 // crypto/internal/fips140/nistec/fiat generator: it invokes fiat-crypto from
 // the fiat-crypto-go-tool Docker image and commits the generated Go source.
-
-//go:build ignore
-
 package main
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 const defaultToolImage = "ghcr.io/islishude/fiat-crypto-go-tool"
@@ -26,18 +26,21 @@ var curves = []struct {
 	modulus string
 }{
 	{
-		dir:     "basefield",
+		dir:     "fiat/basefield",
 		pkg:     "basefield",
 		modulus: "2^256 - 2^32 - 977",
 	},
 	{
-		dir:     "scalarfield",
+		dir:     "fiat/scalarfield",
 		pkg:     "scalarfield",
 		modulus: "2^256 - 432420386565659656852420866394968145599",
 	},
 }
 
 func main() {
+	if err := changeToPackageRoot(); err != nil {
+		log.Fatal(err)
+	}
 	for _, c := range curves {
 		log.Printf("generating %s", c.dir)
 		out := runFiat(c)
@@ -48,10 +51,18 @@ func main() {
 		if err := os.MkdirAll(c.dir, 0755); err != nil {
 			log.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(c.dir, c.dir+".go"), out, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(c.dir, c.pkg+".go"), out, 0644); err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+
+func changeToPackageRoot() error {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return fmt.Errorf("resolve generator source path")
+	}
+	return os.Chdir(filepath.Clean(filepath.Join(filepath.Dir(file), "../..")))
 }
 
 func runFiat(c struct {

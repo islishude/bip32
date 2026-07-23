@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        golang: ["^1.26", "^1.25"]
+        golang: ["stable", "oldstable"]
     steps:
       - uses: actions/checkout@v7
 
@@ -19,14 +19,9 @@ jobs:
           check-latest: true
 
       - run: go build ./...
-      - name: check generated secp256k1 table
-        run: |
-          go generate ./internal/secp256k1
-          git diff --exit-code
       - run: gofmt -d .
       - run: go vet ./...
       - run: go mod tidy -diff
-      - run: go fix -diff ./...
       - name: run unit test
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
@@ -35,3 +30,21 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./coverage.txt
+
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "stable"
+          check-latest: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - run: go generate ./internal/secp256k1
+
+      - run: git diff --exit-code

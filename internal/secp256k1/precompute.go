@@ -2,6 +2,8 @@
 
 package secp256k1
 
+//go:generate go run ./cmd/genfiat
+//go:generate go run ./cmd/genaddchain
 //go:generate go run ./cmd/genprecomp
 
 const (

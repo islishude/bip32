@@ -13,19 +13,34 @@ The implementation is adapted from
 ECDSA, recovery, GLV verification, variable-time secret paths, and architecture
 specific assembly are intentionally not included.
 
-The adapted backend is distributed under [`LICENSE-MIT`](LICENSE-MIT).
-Generator code modeled on Go's crypto packages retains the Go project terms in
-[`LICENSES/BSD-3-Clause-Go.txt`](LICENSES/BSD-3-Clause-Go.txt). Fiat-Crypto's
-separate selectable license texts are checked into the `fiat` directory.
+## Generated code
 
-Field and scalar arithmetic use checked-in Fiat-Crypto generated code. See
-[`fiat/README.md`](fiat/README.md) and [`addchain/README.md`](addchain/README.md)
-for their regeneration requirements and licenses. Regenerate the pure-Go W5
-fixed-base table from this directory with:
+Field and scalar arithmetic, fixed-exponent field operations, and the pure-Go
+W5 fixed-base table are checked-in generated code. From this directory,
+regenerate all of them with:
 
 ```sh
 go generate
 ```
 
-Normal builds do not run generators and production packages do not use
-`math/big`; the table generator and arithmetic oracle tests may use it.
+The generators under `cmd` are:
+
+- `genfiat`, which uses Fiat-Crypto's formally verified model to generate the
+  base- and scalar-field arithmetic;
+- `genaddchain`, which uses
+  [`github.com/mmcloughlin/addchain`](https://github.com/mmcloughlin/addchain)
+  to generate field inversion (`p - 2`) and square-root (`(p + 1) / 4`)
+  routines;
+- `genprecomp`, which generates the fixed-base table.
+
+`genfiat` and `genaddchain` use the
+`ghcr.io/islishude/fiat-crypto-go-tool` Docker image by default. Set
+`FIAT_CRYPTO_GO_TOOL_IMAGE` to use another image, or set `FIAT_CRYPTO_BIN` and
+`ADDCHAIN_BIN` to intentionally use local binaries instead. The Fiat-Crypto
+version used for the checked-in arithmetic reported commit
+`9d0682462646bf645cba7409fa45794dee0418aa` (`v0.1.6`).
+
+Fiat-Crypto generated code is available under the MIT, Apache 2.0, or BSD
+1-Clause license; see the Fiat-Crypto project for the full license texts and
+AUTHORS file. Normal builds do not run generators, and production packages do
+not use `math/big`; the table generator and arithmetic oracle tests may use it.
